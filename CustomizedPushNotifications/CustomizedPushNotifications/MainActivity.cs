@@ -19,11 +19,11 @@ namespace CustomizedPushNotifications
             SetContentView(Resource.Layout.Main);
             var listView1 = FindViewById<ListView>(Resource.Id.listView1);
             string[] items = { "laraloft: " + Twitch.StreamerOnline("laraloft"), "gronkh: " + Twitch.StreamerOnline("gronkh") };
-            listView1.Adapter = new StringListViewAdapter(this, items);
+            listView1.Adapter = new ArrayAdapter<string>(this, Resource.Layout.Main, Android.Resource.Id.Text1, items);
         }
     }
 
-    public class StringListViewAdapter : BaseAdapter<string>
+    /*public class StringListViewAdapter : BaseAdapter<string>
     {
         string[] items;
         Activity context;
@@ -59,7 +59,7 @@ namespace CustomizedPushNotifications
             view.FindViewById<TextView>(Android.Resource.Id.Text1).Text = items[position];
             return view;
         }
-    }
+    }*/
 
 
 
