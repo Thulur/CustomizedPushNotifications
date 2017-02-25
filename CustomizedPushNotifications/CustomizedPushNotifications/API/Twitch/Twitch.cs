@@ -8,13 +8,13 @@ namespace CustomizedPushNotifications.API.Twitch
     {
         private static RestClient restClient = new RestClient("https://api.twitch.tv/kraken");
 
-        public static bool StreamerOnline(string streamerName)
+        public static bool StreamerOnline(string streamerName, Configuration configuration)
         {
             var request = new RestRequest("streams/{streamerName}", Method.GET);
             request.AddUrlSegment("streamerName", streamerName);
 
             request.AddHeader("Accept", "application/vnd.twitchtv.v3+json");
-            request.AddHeader("Client-ID", new Configuration().TwitchClientId);
+            request.AddHeader("Client-ID", configuration.TwitchClientId);
 
             IRestResponse response = restClient.Execute(request);
             dynamic responseJson = JsonConvert.DeserializeObject<dynamic>(response.Content);
@@ -22,7 +22,7 @@ namespace CustomizedPushNotifications.API.Twitch
             return responseJson.stream != null;
         }
 
-        public static Dictionary<string, bool> StreamersOnline(string[] streamerNames)
+        public static Dictionary<string, bool> StreamersOnline(string[] streamerNames, Configuration configuration)
         {
             var result = new Dictionary<string, bool>();
 
@@ -35,7 +35,7 @@ namespace CustomizedPushNotifications.API.Twitch
             request.AddUrlSegment("streamerNames", string.Join(",", streamerNames));
 
             request.AddHeader("Accept", "application/vnd.twitchtv.v3+json");
-            request.AddHeader("Client-ID", new Configuration().TwitchClientId);
+            request.AddHeader("Client-ID", configuration.TwitchClientId);
 
             IRestResponse response = restClient.Execute(request);
             dynamic responseJson = JsonConvert.DeserializeObject<dynamic>(response.Content);

@@ -5,13 +5,15 @@ using Android.Support.V4.App;
 using Android.Views;
 using Android.Widget;
 
+using Newtonsoft.Json;
 using System;
-using System.Collections.Generic;
 using System.Threading;
 
+using CustomizedPushNotifications.API;
 using CustomizedPushNotifications.API.Twitch;
 
 using TaskStackBuilder = Android.Support.V4.App.TaskStackBuilder;
+using System.IO;
 
 namespace CustomizedPushNotifications
 {
@@ -86,6 +88,7 @@ namespace CustomizedPushNotifications
     {
         private static readonly int ButtonClickNotificationId = 1000;
         private static readonly int TimerWait = 30000;
+        private static Configuration configuration;
         private Timer timer;
         private DateTime startTime;
         private bool isStarted = false;
@@ -93,6 +96,11 @@ namespace CustomizedPushNotifications
         public override void OnCreate()
         {
             base.OnCreate();
+
+            using (StreamReader sr = new StreamReader(Assets.Open("Configuration.json")))
+            {
+                configuration = JsonConvert.DeserializeObject<Configuration>(sr.ReadToEnd());
+            }
         }
 
         public override StartCommandResult OnStartCommand(Intent intent, StartCommandFlags flags, int startId)
@@ -124,7 +132,7 @@ namespace CustomizedPushNotifications
 
         void HandleTimerCallback(object state)
         {
-            var streamersOnline = Twitch.StreamersOnline(new string[] { "laraloft", "gronkh" });
+            var streamersOnline = Twitch.StreamersOnline(new string[] { "laraloft", "gronkh" }, configuration);
 
             foreach (var entry in streamersOnline)
             {
