@@ -1,6 +1,7 @@
 ﻿using Android.App;
 using Android.Content;
 using Android.OS;
+using Android.Preferences;
 using Android.Support.V4.App;
 using Android.Views;
 using Android.Widget;
@@ -21,13 +22,18 @@ namespace CustomizedPushNotifications
     public class MainActivity : Activity
     {
         private static readonly ApiService service = new ApiService();
+        private static ISharedPreferences preferences;
 
         protected override void OnCreate(Bundle bundle)
         {
             base.OnCreate(bundle);
             SetContentView(Resource.Layout.Main);
 
-            FindViewById<Switch>(Resource.Id.activeSwitch).CheckedChange += SwitchToggled;
+            preferences = GetPreferences(FileCreationMode.Private);
+
+            var activeSwitch = FindViewById<Switch>(Resource.Id.activeSwitch);
+            activeSwitch.CheckedChange += SwitchToggled;
+            activeSwitch.Checked = preferences.GetBoolean("notifications_active", false);
         }
 
         private void SwitchToggled(object sender, CompoundButton.CheckedChangeEventArgs e)
@@ -35,10 +41,18 @@ namespace CustomizedPushNotifications
             if (e.IsChecked)
             {
                 ApplicationContext.StartService(new Intent(this, typeof(ApiService)));
+
+                ISharedPreferencesEditor editor = preferences.Edit();
+                editor.PutBoolean("notifications_active", true);
+                editor.Apply();
             }
             else
             {
                 ApplicationContext.StopService(new Intent(this, typeof(ApiService)));
+
+                ISharedPreferencesEditor editor = preferences.Edit();
+                editor.PutBoolean("notifications_active", false);
+                editor.Apply();
             }
         }
     }
