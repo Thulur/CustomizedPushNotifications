@@ -63,7 +63,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApiService.cs" />
     <Compile Include="API\Configuration.cs" />
+    <Compile Include="API\Facebook\Facebook.cs" />
     <Compile Include="MainActivity.cs" />
     <Compile Include="Resources\Resource.Designer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

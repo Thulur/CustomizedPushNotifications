@@ -2,19 +2,11 @@
 using Android.Content;
 using Android.OS;
 using Android.Preferences;
-using Android.Support.V4.App;
 using Android.Views;
 using Android.Widget;
 
-using Newtonsoft.Json;
 using System;
-using System.Threading;
-
-using CustomizedPushNotifications.API;
-using CustomizedPushNotifications.API.Twitch;
-
-using TaskStackBuilder = Android.Support.V4.App.TaskStackBuilder;
-using System.IO;
+using System.Collections.Generic;
 
 namespace CustomizedPushNotifications
 {
@@ -23,17 +15,68 @@ namespace CustomizedPushNotifications
     {
         private static readonly ApiService service = new ApiService();
         private static ISharedPreferences preferences;
+        private ArrayAdapter streamerAdapter;
 
         protected override void OnCreate(Bundle bundle)
         {
             base.OnCreate(bundle);
             SetContentView(Resource.Layout.Main);
 
-            preferences = GetPreferences(FileCreationMode.Private);
+            preferences = PreferenceManager.GetDefaultSharedPreferences(this);
 
+            // The switch enables/disables the apps push notifications
             var activeSwitch = FindViewById<Switch>(Resource.Id.activeSwitch);
             activeSwitch.CheckedChange += SwitchToggled;
             activeSwitch.Checked = preferences.GetBoolean("notifications_active", false);
+
+            var addButton = FindViewById<Button>(Resource.Id.addButton);
+            addButton.Click += AddButtonClicked;
+
+            var testButton = FindViewById<Button>(Resource.Id.removeButton);
+            testButton.Click += RemoveButtonClicked;
+
+            var listView = FindViewById<ListView>(Resource.Id.listView1);
+            var items = preferences.GetString("streamer_names", "").Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            streamerAdapter = new ArrayAdapter<string>(this, Android.Resource.Layout.SimpleListItemMultipleChoice, new List<string>(items));
+            listView.Adapter = streamerAdapter;
+        }
+
+        private void RemoveButtonClicked(object sender, EventArgs e)
+        {
+            var streamers = FindViewById<ListView>(Resource.Id.listView1).CheckedItemPositions;
+            var items = preferences.GetString("streamer_names", "").Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+
+            for (var i = 0; i < streamers.Size(); i++)
+            {
+                if (streamers.ValueAt(i) == false) continue;
+
+                streamerAdapter.Remove(items[streamers.KeyAt(i)]);
+                items[streamers.KeyAt(i)] = null;
+            }
+
+            ISharedPreferencesEditor editor = preferences.Edit();
+            editor.PutString("streamer_names", String.Join(";", items));
+            editor.Apply();
+
+            
+            streamerAdapter.NotifyDataSetChanged();
+        }
+
+        /// <summary>
+        /// Adds a new streamer.
+        /// </summary>
+        private void AddButtonClicked(object sender, EventArgs e)
+        {
+            var newStreamerText = FindViewById<EditText>(Resource.Id.newStreamerText);
+            var streamerNames = preferences.GetString("streamer_names", "").Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+
+            ISharedPreferencesEditor editor = preferences.Edit();
+            Array.Resize(ref streamerNames, streamerNames.Length + 1);
+            streamerNames[streamerNames.Length - 1] = newStreamerText.Text;                
+            editor.PutString("streamer_names", String.Join(";", streamerNames));
+            editor.Apply();
+            streamerAdapter.Insert(newStreamerText.Text, streamerAdapter.Count);
+            streamerAdapter.NotifyDataSetChanged();
         }
 
         private void SwitchToggled(object sender, CompoundButton.CheckedChangeEventArgs e)
@@ -59,8 +102,8 @@ namespace CustomizedPushNotifications
 
     public class StringListViewAdapter : BaseAdapter<string>
     {
-        private string[] items;
-        private Activity context;
+        string[] items;
+        Activity context;
 
         public StringListViewAdapter(Activity context, string[] items) : base()
         {
@@ -68,6 +111,8 @@ namespace CustomizedPushNotifications
             this.items = items;
         }
 
+        // Set our view from the "main" layout resource
+        // SetContentView (Resource.Layout.Main);
         public override long GetItemId(int position)
         {
             return position;
@@ -88,91 +133,11 @@ namespace CustomizedPushNotifications
             View view = convertView; // re-use an existing view, if one is available
             if (view == null)
             { // otherwise create a new one
-                view = context.LayoutInflater.Inflate(Android.Resource.Layout.SimpleListItem1, null);
+                view = context.LayoutInflater.Inflate(Android.Resource.Layout.SimpleListItemMultipleChoice, null);
             }
             view.FindViewById<TextView>(Android.Resource.Id.Text1).Text = items[position];
             return view;
-        }
-    }
-
-
-
-    [Service(Name="thulur.CustomizedPushNotifications.ApiService", Exported=true, Process= ":ServiceProcess")]
-    public class ApiService : Service
-    {
-        private static readonly int ButtonClickNotificationId = 1000;
-        private static readonly int TimerWait = 30000;
-        private static Configuration configuration;
-        private Timer timer;
-        private DateTime startTime;
-        private bool isStarted = false;
-
-        public override void OnCreate()
-        {
-            base.OnCreate();
-
-            using (StreamReader sr = new StreamReader(Assets.Open("Configuration.json")))
-            {
-                configuration = JsonConvert.DeserializeObject<Configuration>(sr.ReadToEnd());
-            }
-        }
-
-        public override StartCommandResult OnStartCommand(Intent intent, StartCommandFlags flags, int startId)
-        {
-            if (!isStarted)
-            {
-                startTime = DateTime.UtcNow;
-                timer = new Timer(HandleTimerCallback, startTime, 0, TimerWait);
-                isStarted = true;
-            }
-
-            return StartCommandResult.Sticky;
-        }
-
-        public override IBinder OnBind(Intent intent)
-        {
-            return null;
-        }
-
-
-        public override void OnDestroy()
-        {
-            timer.Dispose();
-            timer = null;
-            isStarted = false;
-
-            base.OnDestroy();
-        }
-
-        void HandleTimerCallback(object state)
-        {
-            var streamersOnline = Twitch.StreamersOnline(new string[] { "laraloft", "gronkh" }, configuration);
-
-            foreach (var entry in streamersOnline)
-            {
-                if (!entry.Value) continue;
-
-                Bundle valuesForActivity = new Bundle();
-                Intent resultIntent = new Intent(this, typeof(MainActivity));
-                resultIntent.PutExtras(valuesForActivity);
-
-                TaskStackBuilder stackBuilder = TaskStackBuilder.Create(this);
-                stackBuilder.AddParentStack(Java.Lang.Class.FromType(typeof(MainActivity)));
-                stackBuilder.AddNextIntent(resultIntent);
-
-                PendingIntent resultPendingIntent = stackBuilder.GetPendingIntent(0, (int)PendingIntentFlags.UpdateCurrent);
-
-                NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
-                    .SetAutoCancel(true)
-                    .SetContentIntent(resultPendingIntent)
-                    .SetContentTitle("Streamer online")
-                    .SetSmallIcon(Resource.Drawable.Icon)
-                    .SetContentText(entry.Key + " is streaming now");
-
-                NotificationManager notificationManager = (NotificationManager)GetSystemService(NotificationService);
-                notificationManager.Notify(ButtonClickNotificationId, builder.Build());
-            }
-        }
-    }
+         }
+     }
 }
 

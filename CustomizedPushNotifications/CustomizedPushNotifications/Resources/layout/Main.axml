@@ -20,11 +20,28 @@
             android:layout_height="wrap_content"
             android:id="@+id/activeSwitch" />
     </Toolbar>
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/newStreamerText"
+        android:lines="1"
+        android:layout_marginRight="0.0dp" />
+    <Button
+        android:text="Add Streamer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/addButton" />
+    <Button
+        android:text="Remove Streamers"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/removeButton" />
     <ListView
         android:minWidth="25px"
         android:minHeight="25px"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:id="@+id/listView1"
-        android:layout_marginTop="0.0dp" />
+        android:choiceMode="multipleChoice"
+        android:layout_marginBottom="0.0dp" />
 </LinearLayout>

@@ -11,5 +11,9 @@ namespace CustomizedPushNotifications.API
         public string TwitterConsumerKey { get; set; }
 
         public string TwitterConsumerSecret { get; set; }
+
+        public string FacebookAppId { get; set; }
+
+        public string FacebookAppSecret { get; set; }
     }
 }
